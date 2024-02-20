@@ -11,6 +11,10 @@ function AddRestaurant() {
   const addRestaurant = async (e) => {
     e.preventDefault();
     try {
+      if(name == '' || location == ''){
+        alert("Input correctly!!!");
+        return;
+      }
       const response = await RestaurantFinder.post('/', {
         name: name,
         location: location,

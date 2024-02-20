@@ -97,6 +97,7 @@ function RestaurantList(props) {
 
       setRestaurants(response.data.data.restaurants);
       setCounts(response.data.allCounts);
+      setPage(1);
     } catch (error) {}
   };
 
