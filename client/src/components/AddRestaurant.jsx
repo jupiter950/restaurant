@@ -18,6 +18,7 @@ function AddRestaurant() {
       });
 
       addRestaurants(response.data.data);
+      setName(''); setLocation(''); setPriceRange('Price range');
     } catch (error) {}
   };
   return (

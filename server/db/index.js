@@ -1,7 +1,6 @@
 const { Pool } = require('pg');
 
 const pool = new Pool();
-console.log("pool----->",pool);
 pool.connect()
   .then(() => {
     console.log('Connected to PostgreSQL database');

@@ -10,16 +10,85 @@ app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json());
 //Get all restaurans
-app.get('/api/v1/restaurants', async (req, res) => {
+app.get('/api/v1/restaurants/:page/:limit', async (req, res) => {
   try {
-    // const result = await db.query('SELECT * FROM restaurants');
+    const offset = (req.params.page - 1) * req.params.limit;
+    const limit = req.params.limit;
     const restaurantRatingsData = await db.query(
+      'select * from restaurants left join (select restaurant_id, COUNT(*), TRUNC(AVG(rating),1) as average_rating from reviews group by restaurant_id) reviews on restaurants.id = reviews.restaurant_id LIMIT $2 offset $1;',
+      [offset, limit]
+    );
+    const restaurantAllData = await db.query(
       'select * from restaurants left join (select restaurant_id, COUNT(*), TRUNC(AVG(rating),1) as average_rating from reviews group by restaurant_id) reviews on restaurants.id = reviews.restaurant_id;'
     );
 
     res.status(200).json({
       status: 'success',
       results: restaurantRatingsData.rows.length,
+      allCounts: restaurantAllData.rows.length,
+      data: {
+        restaurants: restaurantRatingsData.rows,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'fail',
+      error: error,
+    });
+  }
+});
+
+//Search restaurans
+app.post('/api/v1/restaurants/search/:page/:limit', async (req, res) => {
+  try {
+    const offset = (req.params.page - 1) * req.params.limit;
+    const limit = req.params.limit;
+    const {location, name} = req.body;
+    let restaurantRatingsData, restaurantAllData; 
+    if(location != '' && name != ''){
+      restaurantRatingsData = await db.query(
+        `select * from restaurants left join (select restaurant_id, COUNT(*), TRUNC(AVG(rating),1) as average_rating from reviews group by restaurant_id) reviews on restaurants.id = reviews.restaurant_id where restaurants.location=$3 AND restaurants.name=$4 LIMIT $2 offset $1;`,
+        [offset, limit, location, name]
+      );
+      restaurantAllData = await db.query(
+        `select * from restaurants left join (select restaurant_id, COUNT(*), TRUNC(AVG(rating),1) as average_rating from reviews group by restaurant_id) reviews on restaurants.id = reviews.restaurant_id where restaurants.location=$1 AND restaurants.name=$2;`,
+        [location, name]
+      );
+    }
+    else if(location == '' && name != ''){
+      restaurantRatingsData = await db.query(
+        `select * from restaurants left join (select restaurant_id, COUNT(*), TRUNC(AVG(rating),1) as average_rating from reviews group by restaurant_id) reviews on restaurants.id = reviews.restaurant_id where restaurants.name=$3 LIMIT $2 offset $1;`,
+        [offset, limit, name]
+      );
+      restaurantAllData = await db.query(
+        `select * from restaurants left join (select restaurant_id, COUNT(*), TRUNC(AVG(rating),1) as average_rating from reviews group by restaurant_id) reviews on restaurants.id = reviews.restaurant_id where restaurants.name=$1;`,
+        [name]
+      );
+    }
+    else if(location != '' && name == ''){
+      restaurantRatingsData = await db.query(
+        `select * from restaurants left join (select restaurant_id, COUNT(*), TRUNC(AVG(rating),1) as average_rating from reviews group by restaurant_id) reviews on restaurants.id = reviews.restaurant_id WHERE restaurants.location=$3 LIMIT $2 offset $1;`,
+        [offset, limit, location]
+      );
+      restaurantAllData = await db.query(
+        `select * from restaurants left join (select restaurant_id, COUNT(*), TRUNC(AVG(rating),1) as average_rating from reviews group by restaurant_id) reviews on restaurants.id = reviews.restaurant_id WHERE restaurants.location=$1;`,
+        [location]
+      );
+    }
+    else {
+      restaurantRatingsData = await db.query(
+        `select * from restaurants left join (select restaurant_id, COUNT(*), TRUNC(AVG(rating),1) as average_rating from reviews group by restaurant_id) reviews on restaurants.id = reviews.restaurant_id LIMIT $2 offset $1;`,
+        [offset, limit]
+      );
+      restaurantAllData = await db.query(
+        `select * from restaurants left join (select restaurant_id, COUNT(*), TRUNC(AVG(rating),1) as average_rating from reviews group by restaurant_id) reviews on restaurants.id = reviews.restaurant_id;`
+      );
+    }
+
+    res.status(200).json({
+      status: 'success',
+      results: restaurantRatingsData.rows.length,
+      allCounts: restaurantAllData.rows.length,
       data: {
         restaurants: restaurantRatingsData.rows,
       },
